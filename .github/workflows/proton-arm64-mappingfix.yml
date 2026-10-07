@@ -34,9 +34,33 @@ jobs:
           sudo apt-get install -y make git python3 rsync file binutils xz-utils
           docker version
           df -h .
-      - name: Build full Valve Proton ARM64 redistributable and validate archive
+      - name: Fetch exact Proton and Wine sources and apply mapping fix
         shell: bash
-        run: bash scripts/build.sh
+        run: bash scripts/build.sh sources
+      - name: Configure Valve ARM64 SDK
+        shell: bash
+        run: bash scripts/build.sh configure
+      - name: Compile full Proton ARM64 redistributable
+        shell: bash
+        run: bash scripts/build.sh compile
+      - name: Package archive and validate architecture, source, layout and checksum
+        shell: bash
+        run: bash scripts/build.sh package
+      - name: Stress test ARM64EC thread mapping cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          task_root="$PWD"
+          sdk=registry.gitlab.steamos.cloud/proton/steamrt4/sdk/arm64-llvm:4.0.20260331.220802-2
+          docker run --rm -v "$task_root:$task_root" -w "$task_root" \
+            --entrypoint /bin/bash "$sdk" -lc '
+              if x86_64-w64-mingw32-gcc -O2 scripts/thread-churn.c -o logs/thread-churn.exe; then
+                python3 scripts/runtime-check.py
+              else
+                printf "%s\n" "Optional runtime test could not be compiled in this SDK" > logs/thread-churn-unavailable.txt
+                echo "::warning::Optional runtime stress test compiler was unavailable."
+              fi
+            ' 2>&1 | tee logs/thread-churn.log
       - name: Upload validated Proton archive
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

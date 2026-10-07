@@ -11,12 +11,18 @@ task_root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$task_root"
 mkdir -p logs output
 test "$(uname -m)" = aarch64
+stage=${1:-all}
+case "$stage" in all|sources|configure|compile|package) ;; *) exit 2 ;; esac
+
+if [[ $stage == sources || $stage == all ]]; then
 docker info > logs/docker-info.txt
 df -h .
 git clone --depth=1 --branch proton_11.0 --single-branch https://github.com/ValveSoftware/Proton.git proton-source
 git -C proton-source fetch --depth=1 origin "$PROTON_REVISION"
 git -C proton-source checkout --detach "$PROTON_REVISION"
 git -C proton-source submodule update --init --recursive --depth=1 --jobs=4
+git -C proton-source/FEX fetch --unshallow --tags origin
+git -C proton-source/FEX describe --abbrev=7
 test "$(git -C proton-source rev-parse HEAD)" = "$PROTON_REVISION"
 test "$(git -C proton-source/wine rev-parse HEAD)" = "$WINE_REVISION"
 git -C proton-source/wine apply --check "$task_root/patches/arm64ec-mapping-base.patch"
@@ -26,14 +32,25 @@ git -C proton-source/wine diff -- dlls/ntdll/unix/virtual.c > logs/applied-wine.
 git -C proton-source submodule status --recursive > logs/submodule-revisions.txt
 
 python3 scripts/validate.py source proton-source/wine
+fi
+
+if [[ $stage == configure || $stage == all ]]; then
 mkdir proton-build
 cd proton-build
 ../proton-source/configure.sh --target-arch=arm64 \
     --build-name="$BUILD_DISPLAY_NAME" --container-engine=docker \
     --proton-sdk-image="$PROTON_SDK" 2>&1 | tee ../logs/configure.log
+cd "$task_root"
+fi
+
+if [[ $stage == compile || $stage == all ]]; then
+cd proton-build
 make -j"$(nproc)" "BUILD_NAME=$BUILD_DISPLAY_NAME" "INTERNAL_TOOL_NAME=$TOOL_NAME" \
     ENABLE_CCACHE=0 redist 2>&1 | tee ../logs/build.log
 cd "$task_root"
+fi
+
+if [[ $stage == package || $stage == all ]]; then
 python3 scripts/validate.py source proton-build/src-wine
 cmp proton-source/wine/dlls/ntdll/unix/virtual.c proton-build/src-wine/dlls/ntdll/unix/virtual.c
 docker image inspect "$PROTON_SDK" > logs/sdk-image.json
@@ -48,3 +65,4 @@ cd output
 sha256sum "$TOOL_NAME.tar.xz" > "$TOOL_NAME.tar.xz.sha256"
 sha256sum -c "$TOOL_NAME.tar.xz.sha256"
 stat -c '%n: %s bytes' "$TOOL_NAME.tar.xz"
+fi
