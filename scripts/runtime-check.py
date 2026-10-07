@@ -8,9 +8,9 @@ import time
 
 root = Path.cwd()
 report_path = root / 'logs/thread-churn-result.json'
-wine = root / 'output/Proton-11-ARM64-MappingFix/files/bin-arm64/wine'
+wine = root / 'output/Proton 11 ARM64 MappingFix/files/bin-arm64/wine'
 exe = root / 'logs/thread-churn.exe'
-libraries = root / 'output/Proton-11-ARM64-MappingFix/files/lib'
+libraries = root / 'output/Proton 11 ARM64 MappingFix/files/lib'
 environment = dict(os.environ)
 environment.update(WINEPREFIX=str(root / 'thread-test-prefix'), WINEDEBUG='-all',
                    LD_LIBRARY_PATH=f'{libraries}/aarch64-linux-gnu:{libraries}:/usr/aarch64-linux-gnu/lib')

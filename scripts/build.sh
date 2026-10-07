@@ -6,6 +6,7 @@ export WINE_REVISION=dc26e61847081a1b5cb0733dc30feba6ee575482
 export PROTON_SDK=registry.gitlab.steamos.cloud/proton/steamrt4/sdk/arm64-llvm:4.0.20260331.220802-2
 export BUILD_DISPLAY_NAME='Proton 11 ARM64 MappingFix'
 export TOOL_NAME=Proton-11-ARM64-MappingFix
+export PROTON_TREE_NAME='Proton 11 ARM64 MappingFix'
 
 task_root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$task_root"
@@ -55,8 +56,8 @@ python3 scripts/validate.py source proton-build/src-wine
 cmp proton-source/wine/dlls/ntdll/unix/virtual.c proton-build/src-wine/dlls/ntdll/unix/virtual.c
 docker image inspect "$PROTON_SDK" > logs/sdk-image.json
 python3 scripts/validate.py tree proton-build/redist
-mv proton-build/redist "output/$TOOL_NAME"
-XZ_OPT='-T2 -6' tar -cJf "output/$TOOL_NAME.tar.xz" -C output "$TOOL_NAME"
+mv proton-build/redist "output/$PROTON_TREE_NAME"
+XZ_OPT='-T2 -6' tar -cJf "output/$TOOL_NAME.tar.xz" -C output "$PROTON_TREE_NAME"
 xz --test "output/$TOOL_NAME.tar.xz"
 python3 scripts/validate.py archive "output/$TOOL_NAME.tar.xz"
 tar -tf "output/$TOOL_NAME.tar.xz" > logs/archive-contents.txt

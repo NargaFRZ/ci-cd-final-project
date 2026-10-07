@@ -8,7 +8,7 @@ import struct
 import sys
 import tarfile
 
-TOOL_NAME = 'Proton-11-ARM64-MappingFix'
+TOOL_NAME = 'Proton 11 ARM64 MappingFix'
 CORE_ELFS = (
     'files/bin-arm64/wine',
     'files/bin-arm64/wineserver',
