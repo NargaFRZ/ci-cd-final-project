@@ -1,0 +1,56 @@
+name: Proton ARM64 MappingFix runtime validation
+
+on:
+  push:
+    branches: [proton-11-arm64-mappingfix-build]
+    paths:
+      - .github/workflows/proton-arm64-mappingfix-runtime.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  runtime:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Download the completed native ARM64 build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = aarch64
+          mkdir -p output logs
+          gh run download 37560562694 --repo NargaFRZ/ci-cd-final-project \
+            --name Proton-11-ARM64-MappingFix --dir output
+          (cd output && sha256sum -c Proton-11-ARM64-MappingFix.tar.xz.sha256)
+          tar -xJf output/Proton-11-ARM64-MappingFix.tar.xz -C output
+          mv output/Proton-11-ARM64-MappingFix "output/Proton 11 ARM64 MappingFix"
+          python3 scripts/validate.py tree "output/Proton 11 ARM64 MappingFix"
+      - name: Compile and run the x64 thread stress test on ARM64 Wine and FEX
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk=registry.gitlab.steamos.cloud/proton/steamrt4/sdk/arm64-llvm:4.0.20260331.220802-2
+          docker pull "$sdk"
+          docker run --rm -v "$PWD:$PWD" -w "$PWD" \
+            --entrypoint /bin/bash "$sdk" -c '
+              set -euo pipefail
+              export PATH=/opt/llvm-mingw/bin:$PATH
+              export FEX_APP_CONFIG_LOCATION="$PWD/output/Proton 11 ARM64 MappingFix/files/share/fex-emu"
+              /opt/llvm-mingw/bin/x86_64-w64-mingw32-gcc -O2 scripts/thread-churn.c -o logs/thread-churn.exe
+              file logs/thread-churn.exe
+              python3 scripts/runtime-check.py
+            ' 2>&1 | tee logs/thread-churn.log
+      - name: Upload runtime verification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: Proton-11-ARM64-MappingFix-runtime-evidence
+          path: logs/
+          if-no-files-found: error
+          retention-days: 30
