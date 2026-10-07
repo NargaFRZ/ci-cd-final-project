@@ -40,7 +40,9 @@ jobs:
           docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:$PWD" -w "$PWD" \
             --entrypoint /bin/bash "$sdk" -c '
               set -euo pipefail
-              export PATH=/opt/llvm-mingw/bin:$PATH
+              export PATH="$PWD/output/Proton 11 ARM64 MappingFix/files/bin-arm64:/opt/llvm-mingw/bin:$PATH"
+              export WINESERVER="$PWD/output/Proton 11 ARM64 MappingFix/files/bin-arm64/wineserver"
+              export WINEDLLPATH="$PWD/output/Proton 11 ARM64 MappingFix/files/lib/wine"
               export FEX_APP_CONFIG_LOCATION="$PWD/output/Proton 11 ARM64 MappingFix/files/share/fex-emu"
               /opt/llvm-mingw/bin/x86_64-w64-mingw32-gcc -O2 scripts/thread-churn.c -o logs/thread-churn.exe
               file logs/thread-churn.exe
