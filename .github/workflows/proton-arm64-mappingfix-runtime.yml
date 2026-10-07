@@ -37,7 +37,7 @@ jobs:
           set -euo pipefail
           sdk=registry.gitlab.steamos.cloud/proton/steamrt4/sdk/arm64-llvm:4.0.20260331.220802-2
           docker pull "$sdk"
-          docker run --rm -v "$PWD:$PWD" -w "$PWD" \
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:$PWD" -w "$PWD" \
             --entrypoint /bin/bash "$sdk" -c '
               set -euo pipefail
               export PATH=/opt/llvm-mingw/bin:$PATH
